@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>follower</name>
+  <version>0.0.0</version>
+  <description>Package that tracks the position of the predefined turtle that comes with turtlesim when you execute it without parameters and gives an explorer turtle the linear and angular velocity needed to reach the position of the default turtle.</description>
+  <maintainer email="fnornov@etsinf.upv.es">Francisco Nortes Novikov</maintainer>
+  <license>MIT</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>turtlesim</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
