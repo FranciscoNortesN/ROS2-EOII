@@ -1,8 +1,11 @@
-from math import atan2, cos, sin, sqrt
 import rclpy
 from rclpy.node import Node
 from turtlesim.msg import Pose
 from geometry_msgs.msg import Twist
+
+from math import atan2, cos, sin, sqrt
+
+from follower_interfaces.srv import TurtleInfo
 
 class Follower(Node):
     def __init__(self):
@@ -32,11 +35,18 @@ class Follower(Node):
             0.05,
             self.explorer_velocity_callback
         )
+        
+        self.turtle_info = self.create_service(
+            TurtleInfo,
+            "turtle_info",
+            self.turtle_info_callback
+        )
 
         self.turtle_subscription
         self.explorer_subscription
         self.explorer_velocity_changer
         self.explorer_velocity_timer
+        self.turtle_info
 
     def turtle_listener_callback(self, msg:Pose):
         self.turtle_pose = msg
@@ -64,6 +74,23 @@ class Follower(Node):
 
         self.explorer_velocity_changer.publish(msg)
 
+    def turtle_info_callback(self, request, response):
+        response.turtle_x = self.turtle_pose.x
+        response.turtle_y = self.turtle_pose.y
+        response.explorer_x = self.explorer_pose.x
+        response.explorer_y = self.explorer_pose.y
+
+        response.turtle_theta = self.turtle_pose.theta
+        response.explorer_theta = self.explorer_pose.theta
+
+        dx = self.turtle_pose.x - self.explorer_pose.x
+        dy = self.turtle_pose.y - self.explorer_pose.y
+
+        d = sqrt(dx*dx + dy*dy)
+
+        response.distance = d
+
+        return response
 
 def main(args=None):
     rclpy.init(args=args)

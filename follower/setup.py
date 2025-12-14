@@ -25,6 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
                 'follower = follower.follower:main',
+                'follower_client = follower.follower_client:main',
         ],
     },
 )

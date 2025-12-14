@@ -1,0 +1,10 @@
+---
+float64 turtle_x
+float64 turtle_y
+float64 explorer_x
+float64 explorer_y
+
+float64 turtle_theta
+float64 explorer_theta
+
+float64 distance
