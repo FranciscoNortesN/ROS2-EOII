@@ -13,3 +13,5 @@ float64 explorer_linear_velocity
 float64 explorer_angular_velocity
 
 float64 distance
+---
+bool caught

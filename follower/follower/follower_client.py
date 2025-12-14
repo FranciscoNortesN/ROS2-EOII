@@ -39,6 +39,8 @@ class TurtleInfoClient(Node):
                 f'\n===== Turtle Info =====\n'
                 f'Turtle1: x={response.turtle_x:.2f}, y={response.turtle_y:.2f}, θ={response.turtle_theta:.2f}\n'
                 f'Explorer: x={response.explorer_x:.2f}, y={response.explorer_y:.2f}, θ={response.explorer_theta:.2f}\n'
+                f'Turtle1 Velocities: linear={response.turtle_linear_velocity:.2f}, angular={response.turtle_angular_velocity:.2f}\n'
+                f'Explorer Velocities: linear={response.explorer_linear_velocity:.2f}, angular={response.explorer_angular_velocity:.2f}\n'
                 f'Distance: {response.distance:.2f}\n'
                 f'======================'
             )
