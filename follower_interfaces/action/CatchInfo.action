@@ -1,4 +1,9 @@
+# Goal (vacío - no requiere parámetros de entrada)
 ---
+# Result (resultado final)
+bool caught
+---
+# Feedback (información continua durante la ejecución)
 float64 turtle_x
 float64 turtle_y
 float64 explorer_x
@@ -13,5 +18,4 @@ float64 explorer_linear_velocity
 float64 explorer_angular_velocity
 
 float64 distance
----
-bool caught
+

@@ -56,3 +56,6 @@ def main(args=None):
     
     turtle_info_client.destroy_node()
     rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()

@@ -5,5 +5,6 @@
         <param name="explorer_x" value="2.0"/>
         <param name="explorer_y" value="2.0"/>
     </node>
+    <node pkg="follower" exec="follower_server_client" args="--ros-args --log-level info"/>
 </launch>
 
