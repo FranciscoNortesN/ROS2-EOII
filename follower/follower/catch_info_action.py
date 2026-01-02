@@ -19,7 +19,7 @@ class CatchInfoAction(Node):
 
         self.group = ReentrantCallbackGroup()
 
-        self.catch_info_action_server = rclpy.action.ActionServer(
+        self.catch_info_action_server = ActionServer(
             self,
             CatchInfo,
             "catch_info",

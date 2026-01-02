@@ -17,13 +17,7 @@ class TurtleInfoClient(Node):
             self.get_logger().info('Service not available, trying again ...')
 
         self.turtle_info_request = TurtleInfo.Request()
-        
-        # Se utiliza un timer con callbacks asíncronos para las consultas periódicas.
-        # Alternativa vista en clase: usar spin_until_future_complete() en un bucle while
-        # en el main(), pero esa aproximación bloquea el executor y no permite usar
-        # el sistema de timers de ROS2. Esta implementación con add_done_callback()
-        # es la recomendada por la documentación oficial de ROS2 para servicios
-        # llamados desde callbacks, ya que permite ejecución no bloqueante.
+
         self.create_timer(1.0, self.turtle_info_callback)
     
     def turtle_info_callback(self):
