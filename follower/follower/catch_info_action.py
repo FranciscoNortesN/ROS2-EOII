@@ -31,8 +31,10 @@ class CatchInfoAction(Node):
         feedback_msg = CatchInfo.Feedback()
         
         # Esperar a que las poses se inicialicen
-        while not self.shared_poses.are_poses_initialized() and rclpy.ok():
+        tried = 0
+        while not self.shared_poses.are_poses_initialized() and rclpy.ok() and tried < 50:
             sleep(0.05)
+            tried += 1
         
         turtle_pose, explorer_pose = self.shared_poses.get_poses()
         
@@ -56,13 +58,29 @@ class CatchInfoAction(Node):
                 (explorer_pose.y - turtle_pose.y) ** 2
             )
 
+            feedback_msg.turtle_linear_velocity = turtle_pose.linear_velocity
+            feedback_msg.turtle_angular_velocity = turtle_pose.angular_velocity
+            feedback_msg.explorer_linear_velocity = explorer_pose.linear_velocity
+            feedback_msg.explorer_angular_velocity = explorer_pose.angular_velocity
+
             goal_handle.publish_feedback(feedback_msg)
+            
+            self.get_logger().debug(
+                f"Feedback - Distance: {feedback_msg.distance:.2f}, "
+                f"Turtle: ({feedback_msg.turtle_x:.2f}, {feedback_msg.turtle_y:.2f}), "
+                f"Explorer: ({feedback_msg.explorer_x:.2f}, {feedback_msg.explorer_y:.2f})"
+            )
 
             sleep(0.1)
         
         goal_handle.succeed()
         result = CatchInfo.Result()
         result.caught = self._acceptable_caught_distance(turtle_pose, explorer_pose)
+        
+        if result.caught:
+            self.get_logger().info("Catch action completed successfully - Explorer caught!")
+        else:
+            self.get_logger().info("Catch action completed - Explorer not caught")
 
         return result
     

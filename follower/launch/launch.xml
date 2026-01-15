@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
     <node pkg="turtlesim" exec="turtlesim_node" args="--ros-args --log-level error"/>
-    <node pkg="follower" exec="follower" args="--ros-args --log-level error">
+    <node pkg="follower" exec="follower" args="--ros-args --log-level info">
         <param name="explorer_x" value="2.0"/>
         <param name="explorer_y" value="2.0"/>
     </node>

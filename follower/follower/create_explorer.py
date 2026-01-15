@@ -27,10 +27,10 @@ def spawn_explorer(name='explorer'):
     
     # Validar límites
     if not (0.0 <= x <= 11.0 and 0.0 <= y <= 11.0):
-        temp_node.get_logger().error(f'Invalid position: ({x}, {y}). Must be between 0 and 11')
+        temp_node.get_logger().warning(f'Invalid position: ({x}, {y}). Must be between 0 and 11')
         x = min(max(x, 0.0), 11.0)
         y = min(max(y, 0.0), 11.0)
-        temp_node.get_logger().warn(f'Adjusted to: ({x}, {y})')
+        temp_node.get_logger().warning(f'Adjusted to: ({x}, {y})')
     
     # Crear cliente y esperar servicio
     spawn_client = temp_node.create_client(Spawn, '/spawn')
