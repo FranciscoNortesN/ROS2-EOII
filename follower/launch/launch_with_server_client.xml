@@ -1,5 +1,18 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<launch>
+<?xml version="1.0" encoding="UTF-8"?><!--
+    Launch del sistema de seguimiento CON cliente de servicio
+    
+    Inicia:
+    1. turtlesim_node: Simulador
+    2. follower: Sistema completo de seguimiento
+    3. follower_server_client: Cliente que consulta el servicio turtle_info cada 1 segundo
+       y muestra en pantalla las posiciones, velocidades y distancia entre tortugas
+    
+    Uso:
+        ros2 launch follower launch_with_server_client.xml
+        
+    Para mover turtle1:
+        ros2 run turtlesim turtle_teleop_key
+--><launch>
     <node pkg="turtlesim" exec="turtlesim_node" args="--ros-args --log-level error"/>
     <node pkg="follower" exec="follower" args="--ros-args --log-level error">
         <param name="explorer_x" value="2.0"/>

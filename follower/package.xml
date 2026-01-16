@@ -5,6 +5,7 @@
   <version>0.0.0</version>
   <description>Package that tracks the position of the predefined turtle that comes with turtlesim when you execute it without parameters and gives an explorer turtle the linear and angular velocity needed to reach the position of the default turtle.</description>
   <maintainer email="fnornov@etsinf.upv.es">Francisco Nortes Novikov</maintainer>
+  <maintainer email="vbursan@etsinf.upv.es">Vicente Burdeus Sánchez</maintainer>
   <license>MIT</license>
 
   <exec_depend>rclpy</exec_depend>

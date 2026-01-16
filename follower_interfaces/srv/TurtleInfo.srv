@@ -1,15 +1,23 @@
+# Servicio para consultar información completa de ambas tortugas
+# No requiere parámetros de entrada (Request vacío)
 ---
+# Response: Información completa del estado de ambas tortugas
+
+# Posiciones en el plano (unidades de turtlesim: 0-11)
 float64 turtle_x
 float64 turtle_y
 float64 explorer_x
 float64 explorer_y
 
+# Orientaciones en radianes [-π, π]
 float64 turtle_theta
 float64 explorer_theta
 
-float64 turtle_linear_velocity
-float64 turtle_angular_velocity
+# Velocidades actuales
+float64 turtle_linear_velocity     # m/s (lineal)
+float64 turtle_angular_velocity    # rad/s (angular)
 float64 explorer_linear_velocity
 float64 explorer_angular_velocity
 
+# Distancia euclidiana entre las dos tortugas
 float64 distance

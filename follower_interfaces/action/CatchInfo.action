@@ -1,21 +1,27 @@
-# Goal (vacío - no requiere parámetros de entrada)
+# Acción para monitorear el progreso de captura del explorador por turtle1
+# Goal: Vacío - iniciar el monitoreo no requiere parámetros
 ---
-# Result (resultado final)
-bool caught
+# Result: Se devuelve al finalizar la acción
+bool caught  # True si las tortugas están a distancia < 0.1, False en caso contrario
 ---
-# Feedback (información continua durante la ejecución)
+# Feedback: Información continua publicada durante la ejecución (cada 0.1s)
+# Contiene el estado completo de ambas tortugas en tiempo real
+
+# Posiciones en el plano (unidades de turtlesim: 0-11)
 float64 turtle_x
 float64 turtle_y
 float64 explorer_x
 float64 explorer_y
 
+# Orientaciones en radianes [-π, π]
 float64 turtle_theta
 float64 explorer_theta
 
-float64 turtle_linear_velocity
-float64 turtle_angular_velocity
+# Velocidades actuales
+float64 turtle_linear_velocity     # m/s (lineal)
+float64 turtle_angular_velocity    # rad/s (angular)
 float64 explorer_linear_velocity
 float64 explorer_angular_velocity
 
+# Distancia euclidiana entre las dos tortugas
 float64 distance
-

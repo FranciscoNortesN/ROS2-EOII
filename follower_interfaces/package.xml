@@ -5,6 +5,7 @@
   <version>0.0.0</version>
   <description>Package that defines action and server interfaces for the follower package.</description>
   <maintainer email="fnornov@etsinf.upv.es">Francisco Nortes Novikov</maintainer>
+  <maintainer email="vbursan@etsinf.upv.es">Vicente Burdeus Sánchez</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>rosidl_default_generators</buildtool_depend>

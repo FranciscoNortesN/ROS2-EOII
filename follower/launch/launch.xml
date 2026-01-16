@@ -1,4 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Launch básico del sistema de seguimiento de tortugas
+    
+    Inicia:
+    1. turtlesim_node: Simulador con turtle1 (log level: error para no ensuciar la salida)
+    2. follower: Sistema completo de seguimiento (log level: info para ver eventos importantes)
+       - Crea el explorador en la posición (2.0, 2.0)
+       - Inicia todos los nodos (pose_saver, explorer_velocity, turtle_info_service, catch_info_action)
+    
+    Uso:
+        ros2 launch follower launch.xml
+        
+    Para mover turtle1:
+        ros2 run turtlesim turtle_teleop_key
+-->
 <launch>
     <node pkg="turtlesim" exec="turtlesim_node" args="--ros-args --log-level error"/>
     <node pkg="follower" exec="follower" args="--ros-args --log-level info">
