@@ -1,0 +1,405 @@
+\documentclass[12pt,a4paper]{article}
+
+% Paquetes
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{float}
+
+% Configuración de página
+\geometry{margin=2.5cm}
+
+% Configuración de código
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!10},
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{red}
+}
+
+% Información del documento
+\title{\textbf{Sistema de Seguimiento de Tortugas con ROS2} \\ 
+       \large Trabajo 2 - EOII - Versión Extendida}
+\author{Francisco Nortes Novikov \\ Vicente Burdeus Sánchez}
+\date{16 de enero de 2026}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Introducción}
+
+Este documento presenta el proceso completo de desarrollo e implementación de un sistema de seguimiento de tortugas utilizando ROS2. El objetivo principal es crear un sistema donde una tortuga exploradora siga automáticamente a otra tortuga controlada manualmente, implementando servicios y actions para monitorizar el proceso.
+
+Para la implementación exacta del código, se recomienda revisar los archivos fuente proporcionados en el repositorio del proyecto.
+
+\section{Proceso de Desarrollo e Implementación}
+
+\subsection{Paso 1: Exploración de Topics Iniciales}
+
+El primer paso fue comprender la estructura de topics del simulador turtlesim. Iniciamos el simulador y exploramos los topics disponibles:
+
+\begin{lstlisting}[language=bash]
+ros2 run turtlesim turtlesim_node
+ros2 topic list
+\end{lstlisting}
+
+A continuación, identificamos los tipos de datos de los topics relevantes:
+
+\begin{lstlisting}[language=bash]
+ros2 topic info /turtle1/pose
+ros2 interface show turtlesim/msg/Pose
+ros2 topic info /turtle1/cmd_vel
+ros2 interface show geometry_msgs/msg/Twist
+\end{lstlisting}
+
+Con esta exploración descubrimos que el nodo de turtlesim publicaba en \texttt{/turtle1/pose} y esperaba comandos de velocidad en \texttt{/turtle1/cmd\_vel}. Para verificar esta hipótesis, realizamos las siguientes pruebas:
+
+\begin{lstlisting}[language=bash]
+ros2 topic echo /turtle1/pose
+ros2 topic echo /turtle1/cmd_vel
+ros2 run turtlesim turtle_teleop_key
+ros2 topic echo /turtle1/cmd_vel
+\end{lstlisting}
+
+Mediante estas pruebas confirmamos que el topic \texttt{/turtle1/cmd\_vel} solo utilizaba las componentes \texttt{linear.x} y \texttt{angular.z} del mensaje Twist, información crucial para el diseño del controlador.
+
+\subsection{Paso 2: Creación del Paquete y Nodo Básico}
+
+Creamos el paquete principal \textbf{follower} de tipo Python con las dependencias necesarias:
+
+\begin{lstlisting}[language=bash]
+ros2 pkg create follower --build-type ament_python \
+  --dependencies rclpy geometry_msgs turtlesim
+\end{lstlisting}
+
+Configuramos correctamente los archivos \texttt{setup.py} y \texttt{package.xml}, y creamos el primer nodo básico capaz de:
+\begin{itemize}[noitemsep]
+    \item Suscribirse a \texttt{/turtle1/pose}
+    \item Publicar comandos de velocidad en \texttt{/turtle1/cmd\_vel}
+    \item Implementar un controlador proporcional básico
+\end{itemize}
+
+Para el diseño del controlador, utilizamos las siguientes ecuaciones matemáticas:
+
+\begin{itemize}[noitemsep]
+    \item \textbf{Distancia}: $d = \sqrt{(x_t - x_e)^2 + (y_t - y_e)^2}$
+    \item \textbf{Ángulo objetivo}: $\alpha = \text{atan2}(y_t - y_e, x_t - x_e)$
+    \item \textbf{Error angular}: $\theta_e = \text{atan2}(\sin(\alpha - \theta_{actual}), \cos(\alpha - \theta_{actual}))$
+    \item \textbf{Velocidad lineal}: $v = 1.0 \times d \times \cos(\theta_e)$
+    \item \textbf{Velocidad angular}: $\omega = 4.0 \times \theta_e$
+\end{itemize}
+
+Estas ecuaciones permiten que la tortuga exploradora ajuste tanto su velocidad lineal como angular en función de la distancia y orientación relativa a la tortuga objetivo.
+
+\subsection{Paso 3: Creación del Servicio de Información}
+
+Para proporcionar información sobre el estado del sistema, creamos un paquete adicional para las interfaces personalizadas:
+
+\begin{lstlisting}[language=bash]
+ros2 pkg create follower_interfaces --build-type ament_cmake
+\end{lstlisting}
+
+Definimos el servicio \texttt{TurtleInfo.srv} con la siguiente estructura:
+
+\textbf{Request:} Vacío (no requiere parámetros de entrada)
+
+\textbf{Response:} Incluye los siguientes campos de tipo \texttt{float64}:
+\begin{itemize}[noitemsep]
+    \item \texttt{turtle\_x, turtle\_y}: Posición de la tortuga objetivo
+    \item \texttt{explorer\_x, explorer\_y}: Posición de la tortuga exploradora
+    \item \texttt{turtle\_theta, explorer\_theta}: Orientación de ambas tortugas
+    \item \texttt{turtle\_linear\_velocity, turtle\_angular\_velocity}: Velocidades de la tortuga objetivo
+    \item \texttt{explorer\_linear\_velocity, explorer\_angular\_velocity}: Velocidades de la tortuga exploradora
+    \item \texttt{distance}: Distancia entre ambas tortugas
+\end{itemize}
+
+La nomenclatura elegida (``turtle'' y ``explorer'') sigue las convenciones de ROS2 para facilitar la comprensión del código.
+
+Implementamos tanto el servidor del servicio en el nodo principal como un cliente en un nodo separado para las pruebas.
+
+\subsection{Paso 4: Preparación para Primeros Tests}
+
+Durante esta fase detectamos que faltaba implementar la creación automática de la tortuga exploradora. Añadimos la funcionalidad necesaria que:
+
+\begin{itemize}[noitemsep]
+    \item Llama al servicio \texttt{/spawn} de turtlesim
+    \item Crea la tortuga ``explorer'' en una posición aleatoria
+    \item Configura los parámetros necesarios del nodo
+\end{itemize}
+
+Creamos el primer archivo launch (\texttt{launch.xml}) siguiendo la \href{https://docs.ros.org/en/jazzy/Tutorials/Intermediate/Launch/Launch-system.html}{documentación oficial de ROS2}, que lanzaba:
+\begin{itemize}[noitemsep]
+    \item El simulador turtlesim
+    \item El nodo principal de seguimiento
+    \item El nodo cliente del servicio de información
+\end{itemize}
+
+Configuramos \texttt{setup.py} para incluir el directorio de launch files y procedimos a compilar y probar:
+
+\begin{lstlisting}[language=bash]
+colcon build --packages-select follower follower_interfaces
+source install/setup.bash
+ros2 launch follower launch.xml
+\end{lstlisting}
+
+\subsection{Paso 5: Implementación del Action Server}
+
+Creamos la interfaz para el action server añadiendo \texttt{CatchTurtle.action} al paquete \textbf{follower\_interfaces}:
+
+\textbf{Goal:} Vacío
+
+\textbf{Result:} \texttt{bool caught} (indica si la tortuga fue capturada exitosamente)
+
+\textbf{Feedback:} Los mismos campos que la respuesta del servicio TurtleInfo
+
+La implementación inicial del action server en el nodo principal reveló un problema crítico: el action server bloqueaba la ejecución del nodo, impidiendo que el controlador funcionara correctamente. Este fue el problema más significativo encontrado durante el desarrollo.
+
+\subsection{Paso 6: Problema de Bloqueo y Solución}
+
+\textbf{Problema encontrado:} Al ejecutar el action server en el mismo nodo que el controlador, el servidor "secuestraba" el hilo de ejecución principal, bloqueando todos los demás callbacks.
+
+\textbf{Soluciones consideradas:}
+\begin{enumerate}
+    \item Usar \texttt{threading.Thread} para ejecutar el action server en un hilo separado
+    \item Estudiar executors y callback groups de ROS2 para una solución más robusta
+\end{enumerate}
+
+Tras investigar la \href{https://docs.ros.org/en/jazzy/Concepts/Intermediate/About-Executors.html}{documentación avanzada de ROS2} sobre executors y callback groups, decidimos implementar la segunda opción, que requería una reescritura completa hacia una arquitectura modular.
+
+\subsection{Paso 7: Reescritura en Arquitectura Modular}
+
+La arquitectura modular final separa completamente las responsabilidades en diferentes nodos:
+
+\textbf{Módulos core:}
+\begin{itemize}[noitemsep]
+    \item \textbf{shared\_poses.py}: Clase \texttt{SharedPoses} que utiliza \texttt{threading.Lock} y \texttt{deepcopy} para proporcionar acceso thread-safe a las poses compartidas entre nodos
+    \item \textbf{create\_explorer.py}: Función auxiliar para crear automáticamente la tortuga exploradora mediante el servicio \texttt{/spawn}
+\end{itemize}
+
+\textbf{Nodos funcionales:}
+\begin{itemize}[noitemsep]
+    \item \textbf{pose\_savers.py}: Nodo dedicado exclusivamente a suscribirse a \texttt{/turtle1/pose} y \texttt{/explorer/pose}, almacenando las poses en el objeto compartido
+    \item \textbf{explorer\_velocity.py}: Nodo con el controlador proporcional que calcula y publica las velocidades en \texttt{/explorer/cmd\_vel}
+    \item \textbf{turtle\_info\_service.py}: Nodo que implementa el servidor del servicio de información
+    \item \textbf{catch\_info\_action.py}: Nodo que implementa el action server para el proceso de captura
+    \item \textbf{follower.py}: Nodo principal que orquesta e inicializa todos los demás nodos
+\end{itemize}
+
+\textbf{Nodos cliente (para pruebas):}
+\begin{itemize}[noitemsep]
+    \item \textbf{follower\_server\_client.py}: Cliente del servicio de información
+    \item \textbf{follower\_action\_client.py}: Cliente del action server
+\end{itemize}
+
+Esta arquitectura modular resolvió completamente el problema de bloqueo y proporcionó además:
+\begin{itemize}[noitemsep]
+    \item Mejor separación de responsabilidades
+    \item Código más mantenible y testeable
+    \item Ejecución concurrente sin bloqueos
+    \item Sincronización thread-safe de datos compartidos
+\end{itemize}
+
+\subsection{Paso 8: Organización de Launch Files}
+
+Para facilitar las pruebas durante el desarrollo, creamos tres archivos launch diferentes:
+
+\begin{itemize}[noitemsep]
+    \item \textbf{launch.xml}: Sistema básico con solo el seguimiento automático
+    \item \textbf{launch\_with\_server\_client.xml}: Añade el cliente del servicio de información
+    \item \textbf{launch\_with\_action\_client.xml}: Añade el cliente del action server
+\end{itemize}
+
+Esta organización permitió probar independientemente cada componente del sistema.
+
+\subsection{Paso 9: Pruebas Finales y Ajustes}
+
+Realizamos pruebas exhaustivas del sistema completo:
+
+\begin{enumerate}[noitemsep]
+    \item Verificación del seguimiento básico con diferentes velocidades y trayectorias
+    \item Pruebas del servicio de información con llamadas concurrentes
+    \item Validación del action server con múltiples ciclos de captura
+    \item Pruebas de robustez ante condiciones extremas (movimientos rápidos, cambios bruscos)
+\end{enumerate}
+
+Se corrigieron errores menores relacionados con:
+\begin{itemize}[noitemsep]
+    \item Condiciones de borde en el cálculo de velocidades
+    \item Sincronización de datos en el objeto compartido
+    \item Manejo de errores en las llamadas a servicios
+\end{itemize}
+
+\section{Descripción Técnica de la Implementación}
+
+\subsection{Arquitectura del Sistema}
+
+El sistema final consta de dos paquetes ROS2:
+
+\textbf{Paquete follower:}
+\begin{itemize}[noitemsep]
+    \item Tipo: ament\_python
+    \item Dependencias: rclpy, geometry\_msgs, turtlesim, follower\_interfaces
+    \item Contiene todos los nodos funcionales y clientes
+\end{itemize}
+
+\textbf{Paquete follower\_interfaces:}
+\begin{itemize}[noitemsep]
+    \item Tipo: ament\_cmake
+    \item Contiene las definiciones de servicio (TurtleInfo.srv) y action (CatchTurtle.action)
+\end{itemize}
+
+\subsection{Controlador Proporcional}
+
+El controlador implementado es de tipo proporcional (P) que:
+
+\begin{enumerate}[noitemsep]
+    \item Calcula la distancia euclidiana entre las tortugas
+    \item Determina el ángulo objetivo hacia la tortuga a seguir
+    \item Calcula el error angular respecto a la orientación actual
+    \item Ajusta la velocidad lineal proporcionalmente a la distancia, reducida por el coseno del error angular
+    \item Ajusta la velocidad angular proporcionalmente al error angular
+\end{enumerate}
+
+Las constantes proporcionales (1.0 para lineal, 4.0 para angular) fueron ajustadas empíricamente para obtener un seguimiento suave y preciso.
+
+\subsection{Sincronización Thread-Safe}
+
+La clase \texttt{SharedPoses} implementa el patrón de diseño Thread-Safe Singleton mediante:
+
+\begin{itemize}[noitemsep]
+    \item \texttt{threading.Lock} para proteger el acceso concurrente
+    \item \texttt{copy.deepcopy} para devolver copias independientes de los datos
+    \item Métodos getter y setter protegidos por el lock
+\end{itemize}
+
+Esto garantiza que múltiples nodos puedan acceder a las poses sin condiciones de carrera.
+
+\section{Interfaces Implementados}
+
+\subsection{Servicio TurtleInfo.srv}
+
+\textbf{Propósito:} Proporcionar información completa sobre el estado actual de ambas tortugas.
+
+\textbf{Request:} Vacío (no requiere parámetros)
+
+\textbf{Response:}
+\begin{lstlisting}
+float64 turtle_x
+float64 turtle_y
+float64 explorer_x
+float64 explorer_y
+float64 turtle_theta
+float64 explorer_theta
+float64 turtle_linear_velocity
+float64 turtle_angular_velocity
+float64 explorer_linear_velocity
+float64 explorer_angular_velocity
+float64 distance
+\end{lstlisting}
+
+\subsection{Action CatchTurtle.action}
+
+\textbf{Propósito:} Monitorizar el proceso de captura de la tortuga objetivo, proporcionando feedback continuo hasta la captura.
+
+\textbf{Goal:} Vacío (inicia el proceso de captura)
+
+\textbf{Result:}
+\begin{lstlisting}
+bool caught
+\end{lstlisting}
+
+\textbf{Feedback:} Los mismos campos que TurtleInfo.srv, permitiendo monitorización en tiempo real
+
+\section{Problemas Encontrados y Soluciones}
+
+\subsection{Bloqueo del Action Server}
+
+\textbf{Problema:} El action server bloqueaba el nodo principal al ejecutarse en el mismo hilo que los demás callbacks.
+
+\textbf{Solución:} Reescritura completa en arquitectura modular con nodos separados, cada uno con su propio executor. Uso de \texttt{SharedPoses} para compartir datos de forma thread-safe entre nodos.
+
+\subsection{Sincronización de Datos}
+
+\textbf{Problema:} Múltiples nodos necesitaban acceso concurrente a las poses de las tortugas.
+
+\textbf{Solución:} Implementación de \texttt{SharedPoses} con \texttt{threading.Lock} y \texttt{deepcopy} para garantizar acceso thread-safe.
+
+\subsection{Creación Automática de la Tortuga Exploradora}
+
+\textbf{Problema:} Inicialmente la tortuga exploradora debía crearse manualmente.
+
+\textbf{Solución:} Implementación de función auxiliar que llama al servicio \texttt{/spawn} automáticamente al iniciar el sistema.
+
+\section{Resultados de Pruebas}
+
+\subsection{Pruebas Funcionales}
+
+Se realizaron las siguientes pruebas con resultados exitosos:
+
+\begin{enumerate}[noitemsep]
+    \item \textbf{Seguimiento básico:} La tortuga exploradora sigue correctamente a turtle1 en todo momento
+    \item \textbf{Servicio de información:} El cliente recibe datos precisos y actualizados
+    \item \textbf{Action server:} Proporciona feedback continuo y detecta correctamente la captura
+    \item \textbf{Robustez:} El sistema funciona correctamente con movimientos rápidos y cambios bruscos de dirección
+\end{enumerate}
+
+Las siguientes figuras muestran el sistema en funcionamiento:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{server_client.png}
+    \caption{Cliente del servicio de información mostrando datos en tiempo real}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{action_client.png}
+    \caption{Cliente del action server mostrando feedback del proceso de captura}
+\end{figure}
+
+\section{Mapa de Nodos, Topics y Servicios}
+
+El siguiente grafo generado con \texttt{rqt\_graph} muestra la arquitectura completa del sistema, incluyendo todos los nodos, topics, servicios y actions:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{rosgraph.png}
+    \caption{Grafo completo del sistema generado con rqt\_graph}
+\end{figure}
+
+El grafo muestra claramente:
+\begin{itemize}[noitemsep]
+    \item Nodos de turtlesim y teleop
+    \item Nodos del sistema follower
+    \item Topics de poses y comandos de velocidad
+    \item Servicios de información
+    \item Action server de captura
+\end{itemize}
+
+\section{Conclusiones}
+
+El sistema de seguimiento de tortugas fue implementado exitosamente, cumpliendo todos los requisitos especificados. Los aspectos más destacables incluyen:
+
+\begin{itemize}[noitemsep]
+    \item \textbf{Arquitectura modular:} Facilita el mantenimiento y la extensibilidad
+    \item \textbf{Sincronización robusta:} Garantiza la integridad de los datos compartidos
+    \item \textbf{Interfaces bien diseñados:} Permiten monitorización completa del sistema
+    \item \textbf{Controlador eficiente:} Proporciona seguimiento suave y preciso
+\end{itemize}
+
+El principal desafío técnico fue la gestión de la concurrencia y el bloqueo del action server, que se resolvió mediante una reescritura completa hacia una arquitectura más modular y profesional. Esta experiencia demuestra la importancia de comprender los conceptos avanzados de ROS2 como executors y callback groups.
+
+\end{document}

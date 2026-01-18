@@ -1,0 +1,121 @@
+\documentclass[12pt,a4paper]{article}
+
+% Paquetes
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{float}
+
+% Configuración de página
+\geometry{margin=2cm}
+
+% Configuración de código
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\color{gray!10},
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{red}
+}
+
+% Información del documento
+\title{\textbf{Sistema de Seguimiento de Tortugas con ROS2} \\ 
+       \large Trabajo 2 - EOII}
+\author{Francisco Nortes Novikov \\ Vicente Burdeus Sánchez}
+\date{16 de enero de 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Descripción de la Implementación}
+
+El sistema desarrollado consiste en un seguidor de tortugas en ROS2 que permite que una tortuga exploradora siga automáticamente a otra tortuga controlada manualmente. Se implementó una arquitectura modular con los siguientes componentes:
+
+\textbf{Paquetes creados:}
+\begin{itemize}[noitemsep]
+    \item \textbf{follower}: Paquete principal con la lógica de seguimiento
+    \item \textbf{follower\_interfaces}: Definiciones de servicios y actions personalizados
+\end{itemize}
+
+\textbf{Nodos principales:}
+\begin{itemize}[noitemsep]
+    \item \textbf{pose\_savers}: Suscriptor a \texttt{/turtle1/pose} y \texttt{/explorer/pose}
+    \item \textbf{explorer\_velocity}: Controlador proporcional que publica velocidades en \texttt{/explorer/cmd\_vel}
+    \item \textbf{turtle\_info\_service}: Servidor del servicio de información
+    \item \textbf{catch\_info\_action}: Action server para el proceso de captura
+\end{itemize}
+
+\textbf{Ecuaciones del controlador:} $d = \sqrt{(x_t - x_e)^2 + (y_t - y_e)^2}$, $\alpha = \text{atan2}(y_t - y_e, x_t - x_e)$, $\theta_e = \text{atan2}(\sin(\alpha - \theta_{actual}), \cos(\alpha - \theta_{actual}))$, $v = 1.0 \times d \times \cos(\theta_e)$, $\omega = 4.0 \times \theta_e$.
+
+\section{Interfaces Implementados}
+
+\subsection{Servicio TurtleInfo.srv}
+
+Proporciona información completa sobre ambas tortugas:
+
+\textbf{Request:} Vacío
+
+\textbf{Response:} \texttt{float64} para posiciones (\texttt{turtle\_x/y}, \texttt{explorer\_x/y}), orientaciones (\texttt{turtle\_theta}, \texttt{explorer\_theta}), velocidades (\texttt{turtle/explorer\_linear/angular\_velocity}) y \texttt{distance}.
+
+\subsection{Action CatchTurtle.action}
+
+Permite monitorizar el proceso de captura con feedback continuo:
+
+\textbf{Goal:} Vacío
+
+\textbf{Result:} \texttt{bool caught} (indica si la tortuga fue capturada)
+
+\textbf{Feedback:} Los mismos campos que la respuesta del servicio TurtleInfo
+
+\section{Problemas Encontrados y Soluciones}
+
+\subsection{Bloqueo del Action Server}
+
+\textbf{Problema:} Al implementar inicialmente el action server en el nodo principal, este bloqueaba la ejecución del resto de callbacks, impidiendo que el controlador funcionara correctamente.
+
+\textbf{Solución:} Tras investigar la documentación de ROS2 sobre executors y callback groups, se optó por una arquitectura modular completamente separada. Se creó un nodo independiente para cada funcionalidad principal, utilizando \texttt{SharedPoses} con \texttt{threading.Lock} para compartir datos de forma thread-safe entre nodos.
+
+\subsection{Sincronización de Datos}
+
+\textbf{Problema:} Acceso concurrente a las poses desde múltiples nodos.
+
+\textbf{Solución:} Implementación de la clase \texttt{SharedPoses} con locks y \texttt{deepcopy} para garantizar acceso thread-safe a los datos compartidos.
+
+\section{Resultados de Pruebas}
+
+Se realizaron las siguientes pruebas con resultados exitosos:
+
+\begin{enumerate}[noitemsep]
+    \item \textbf{Seguimiento básico:} La tortuga exploradora sigue correctamente a turtle1 controlada por teleop
+    \item \textbf{Servicio de información:} El cliente recibe y muestra correctamente todos los datos de posición y velocidad
+    \item \textbf{Action server:} Proporciona feedback continuo durante el proceso de captura hasta alcanzar el objetivo
+\end{enumerate}
+
+El sistema funciona de manera fluida y precisa. Las siguientes capturas muestran los clientes funcionando:
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.48\textwidth]{server_client.png}
+    \hfill
+    \includegraphics[width=0.48\textwidth]{action_client.png}
+    \caption{Cliente del servicio de información (izq.) y del action server (der.)}
+\end{figure}
+
+\section{Mapa de Nodos, Topics y Servicios}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{rosgraph.png}
+    \caption{Grafo de nodos del sistema (rqt\_graph)}
+\end{figure}
+
+\end{document}
