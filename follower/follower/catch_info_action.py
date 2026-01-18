@@ -134,12 +134,8 @@ class CatchInfoAction(Node):
                 f"Turtle: ({feedback_msg.turtle_x:.2f}, {feedback_msg.turtle_y:.2f}), "
                 f"Explorer: ({feedback_msg.explorer_x:.2f}, {feedback_msg.explorer_y:.2f})"
             )
-
-            # Sleep de 0.1s (10 Hz) para feedback
-            # Frecuencia razonable para mostrar progreso sin saturar al cliente
-            # Más rápido (ej: 0.01s) → sobrecarga de mensajes innecesaria
-            # Más lento (ej: 0.5s) → feedback poco frecuente
-            sleep(0.1)
+            
+            sleep(1.0)
         
         goal_handle.succeed()
         result = CatchInfo.Result()
